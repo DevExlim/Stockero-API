@@ -1,0 +1,352 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Stockero API",
+    "version": "1.0.0",
+    "description": "The member API powering PokeStock Watch. Stockero provides Best Buy community restock reports, nearby stores, trust votes, and staff moderation. Every member-data endpoint requires a current paid Discord session."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "security": [{ "cookieSession": [] }],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Get Stockero service health",
+        "security": [],
+        "responses": {
+          "200": { "description": "Stockero is operational or degraded" },
+          "503": { "description": "A required Stockero service is unavailable" }
+        }
+      }
+    },
+    "/restocks": {
+      "get": {
+        "summary": "List member-visible restocks",
+        "parameters": [
+          { "name": "zip", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "latitude", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "longitude", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "radius", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "product", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "storeId", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer" } },
+          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "north", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "south", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "east", "in": "query", "required": false, "schema": { "type": "number" } },
+          { "name": "west", "in": "query", "required": false, "schema": { "type": "number" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated restocks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Restock" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "summary": "Submit a community restock report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["storeId", "productName", "quantity"],
+                "properties": {
+                  "storeId": { "type": "string" },
+                  "productName": { "type": "string", "minLength": 3, "maxLength": 150 },
+                  "quantity": { "type": "integer", "minimum": 1, "maximum": 999 },
+                  "comments": { "type": "string", "maxLength": 500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Report accepted for Discord publication" },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" },
+          "429": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/restocks/{id}": {
+      "get": {
+        "summary": "Get a restock",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "description": "Restock detail" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/restocks/{id}/vote": {
+      "post": {
+        "summary": "Confirm stock or report low/sold-out stock",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vote"],
+                "properties": {
+                  "vote": { "type": "string", "enum": ["confirmed", "low_stock", "sold_out"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Trust vote saved" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/stores/nearby": {
+      "get": {
+        "summary": "List nearby Best Buy stores and their active restocks",
+        "responses": { "200": { "description": "Nearby stores" } }
+      }
+    },
+    "/stores/{id}": {
+      "get": {
+        "summary": "Get a Best Buy store",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Store detail" } }
+      }
+    },
+    "/stores/{id}/restocks": {
+      "get": {
+        "summary": "List restocks for a store",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Store restocks" } }
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Get paid-member statistics",
+        "responses": { "200": { "description": "Member statistics" } }
+      }
+    },
+    "/admin/reports": {
+      "get": {
+        "summary": "List submissions",
+        "responses": {
+          "200": { "description": "Moderator report list" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/reports/{id}": {
+      "get": {
+        "summary": "Get complete report review data",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Report review data" } }
+      },
+      "patch": {
+        "summary": "Change report status with audit event",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReportStatusMutation" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Updated report" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "summary": "List reporting users",
+        "responses": { "200": { "description": "Reporting users" } }
+      }
+    },
+    "/admin/users/{id}": {
+      "patch": {
+        "summary": "Restrict or restore reporting",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Updated user" } }
+      }
+    },
+    "/admin/stores": {
+      "get": {
+        "summary": "List stores (administrator)",
+        "responses": { "200": { "description": "Store administration list" } }
+      }
+    },
+    "/admin/stores/{id}": {
+      "patch": {
+        "summary": "Enable or disable a store (administrator)",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Updated store" } }
+      }
+    },
+    "/admin/stores/{id}/merge": {
+      "post": {
+        "summary": "Merge a duplicate store into another store (administrator)",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Reports repointed and source store disabled" } }
+      }
+    },
+    "/admin/abuse": {
+      "get": {
+        "summary": "List abuse flags",
+        "responses": { "200": { "description": "Abuse flag review list" } }
+      }
+    },
+    "/admin/abuse/{id}": {
+      "patch": {
+        "summary": "Resolve an abuse flag with an audited action",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": { "200": { "description": "Resolved abuse flag" } }
+      }
+    },
+    "/admin/audit": {
+      "get": {
+        "summary": "List append-only audit actions (administrator)",
+        "responses": { "200": { "description": "Audit actions" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieSession": { "type": "apiKey", "in": "cookie", "name": "__Host-restock_session" }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "pattern": "^[a-fA-F0-9]{24}$" }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Consistent API error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "requestId"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "requestId": { "type": "string" }
+            }
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["count", "nextCursor"],
+        "properties": {
+          "count": { "type": "integer" },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "Store": {
+        "type": "object",
+        "required": ["id", "name", "address", "city", "state", "zipCode", "latitude", "longitude"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "zipCode": { "type": "string" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" }
+        }
+      },
+      "Restock": {
+        "type": "object",
+        "required": [
+          "id",
+          "productName",
+          "estimatedQuantity",
+          "status",
+          "freshness",
+          "reportedAt",
+          "lastConfirmedAt",
+          "confirmationCount",
+          "comments",
+          "store",
+          "reporter",
+          "links"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "productName": { "type": "string" },
+          "estimatedQuantity": { "type": "integer" },
+          "status": { "type": "string", "enum": ["active", "low_stock", "sold_out"] },
+          "freshness": { "type": "string", "enum": ["recent", "aging", "old", "archived"] },
+          "reportedAt": { "type": "string", "format": "date-time" },
+          "lastConfirmedAt": { "type": ["string", "null"], "format": "date-time" },
+          "confirmationCount": { "type": "integer" },
+          "comments": {
+            "type": ["string", "null"],
+            "description": "Plain text; clients must not interpret it as HTML."
+          },
+          "distanceMiles": { "type": ["number", "null"] },
+          "store": { "$ref": "#/components/schemas/Store" },
+          "reporter": {
+            "type": "object",
+            "required": ["reliabilityLabel"],
+            "properties": { "reliabilityLabel": { "type": "string" } }
+          },
+          "links": {
+            "type": "object",
+            "required": ["directions"],
+            "properties": { "directions": { "type": "string", "format": "uri" } }
+          }
+        }
+      },
+      "ReportStatusMutation": {
+        "type": "object",
+        "required": ["status", "reason"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["active", "low_stock", "sold_out", "removed", "archived"]
+          },
+          "reason": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "expectedUpdatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
