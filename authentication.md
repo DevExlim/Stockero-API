@@ -1,39 +1,46 @@
-# Authentication and security
+# Authentication and key security
 
-## Current browser authentication
+Send the API key in the standard HTTP `Authorization` header on every private developer request:
 
-Stockero v1 currently authenticates protected requests with the secure PokeStock Watch browser session. Login is completed through Discord OAuth, followed by a server-side guild and paid-role check.
+```http
+Authorization: Bearer stk_live_your_key_here
+Accept: application/json
+```
 
-Production session cookies are:
+Do not send it in a query parameter, URL, cookie, request body, analytics event, crash report, or client-visible log.
 
-- Secure
-- HttpOnly
-- SameSite=Lax
-- Limited to the PokeStock Watch host
+## The most important rule
 
-The server periodically rechecks Discord membership. Losing the required server membership or role revokes access.
+{% hint style="danger" %}
+Never call Stockero directly from browser JavaScript, React Native, an iOS app, or an Android app. Users can inspect those applications and steal the key. Your client must call your backend; your backend calls Stockero.
+{% endhint %}
 
-## Access levels
+Store the value in a secret manager or server environment variable:
 
-| Level         | Access                                                     |
-| ------------- | ---------------------------------------------------------- |
-| Public        | Service health only                                        |
-| Paid member   | Restocks, stores, voting, reporting, and member statistics |
-| Moderator     | Paid-member access plus report and member moderation       |
-| Administrator | All moderator tools plus store and audit management        |
+```text
+STOCKERO_API_KEY=stk_live_...
+STOCKERO_API_BASE_URL=https://pokestock.watch/api/v1
+```
 
-## CSRF protection
+Do not prefix a public frontend variable such as `NEXT_PUBLIC_`, `VITE_`, or `EXPO_PUBLIC_`.
 
-Every request that creates or changes data requires the session's `X-CSRF-Token`. A missing or invalid token returns `403 INVALID_CSRF`.
+## Key behavior
 
-## Mobile and third-party applications
+- Keys are hashed at rest and cannot be read back after the one-time reveal.
+- Each key has explicit read scopes.
+- Each key has an expiration date.
+- Administrators can see the key prefix and usage metadata, but not the full secret.
+- Revocation takes effect on the next request.
+- Private API traffic is rate-limited by key.
 
-Do not reuse browser cookies or embed server credentials in a mobile app. A future public/mobile release should add:
+## Browser sessions are different
 
-1. Discord authorization code flow with PKCE.
-2. A dedicated server-side mobile callback.
-3. Short-lived Stockero access tokens.
-4. Rotating refresh tokens stored as hashes.
-5. Role revalidation and token-family revocation.
+PokeStock Watch's own website uses a secure Discord-backed browser session and CSRF protection. That session is for first-party member and admin actions. Third-party developers must not copy or automate browser cookies. API keys are accepted only by approved read endpoints.
 
-Until that system exists, Stockero API should be treated as first-party and browser-only.
+## If a key may be exposed
+
+1. Stop the affected deployment.
+2. Ask a PokeStock Watch administrator to revoke the key.
+3. Remove it from source history, build artifacts, logs, and analytics.
+4. Submit a replacement request.
+5. Review how it leaked before deploying the replacement.

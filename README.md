@@ -1,8 +1,10 @@
 # Stockero API
 
-Stockero API powers the PokeStock Watch member map, community restock reports, stock votes, store discovery, and staff tools.
+Stockero is the private, read-only developer API for PokeStock Watch. An approved integration can retrieve published community restocks, discover nearby Best Buy stores, and read aggregate community statistics without connecting directly to MongoDB or the Discord bot.
 
-> **Current availability:** Stockero API v1 is a first-party beta API. It is used by the PokeStock Watch website and requires a current paid-member Discord session. Public API keys and mobile access tokens are not available yet.
+{% hint style="warning" %}
+**Private beta:** access is manually approved. An API key belongs to one app and one developer. Do not share, resell, or expose it in browser or mobile application code.
+{% endhint %}
 
 ## Base URL
 
@@ -10,30 +12,24 @@ Stockero API powers the PokeStock Watch member map, community restock reports, s
 https://pokestock.watch/api/v1
 ```
 
-All request and response bodies use JSON. Dates are ISO 8601 UTC strings, IDs are 24-character hexadecimal strings, and enum values use `snake_case`.
+Every API response is JSON. Dates are ISO 8601 UTC strings, resource IDs are 24-character hexadecimal strings, and enum values use `snake_case`.
 
-## What the API provides
+## What private keys can access
 
-- Nearby Best Buy store discovery by ZIP code or coordinates
-- Active community restock reports
-- New report submission and Discord publication
-- Confirmed, low-stock, and sold-out votes
-- Member statistics
-- Audited staff moderation tools
-- Service health information
+| Scope           | What it permits                                              |
+| --------------- | ------------------------------------------------------------ |
+| `restocks:read` | List published restocks and retrieve one report              |
+| `stores:read`   | Find nearby stores, retrieve one store, and list its reports |
+| `stats:read`    | Read aggregate member-visible statistics                     |
 
-## Health check
+API keys cannot create reports, vote, send Discord alerts, moderate users, or access admin data. Those actions remain protected by the PokeStock Watch website session.
 
-`GET /health` is the only endpoint designed for unauthenticated monitoring.
+## First successful request
 
-```json
-{
-  "data": {
-    "overall": "operational",
-    "checkedAt": "2026-08-29T14:04:30.735Z",
-    "services": []
-  }
-}
+```bash
+curl "https://pokestock.watch/api/v1/restocks?zip=10001&radius=10&limit=10" \
+  --header "Authorization: Bearer $STOCKERO_API_KEY" \
+  --header "Accept: application/json"
 ```
 
-The machine-readable OpenAPI 3.1 definition is maintained in `docs/openapi-v1.json` in the project repository.
+Start with [Requesting access](requesting-access.md), then follow the [server-side quickstart](quickstart.md).

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Stockero API",
-    "version": "1.0.0",
-    "description": "The member API powering PokeStock Watch. Stockero provides Best Buy community restock reports, nearby stores, trust votes, and staff moderation. Every member-data endpoint requires a current paid Discord session."
+    "version": "1.1.0",
+    "description": "The private developer API powering PokeStock Watch. Approved integrations use a server-side Stockero API key for read-only restock, store, and statistics access. Browser-only mutations continue to use a paid-member session."
   },
   "servers": [{ "url": "/api/v1" }],
   "security": [{ "cookieSession": [] }],
@@ -21,6 +21,7 @@
     "/restocks": {
       "get": {
         "summary": "List member-visible restocks",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
         "parameters": [
           { "name": "zip", "in": "query", "required": false, "schema": { "type": "string" } },
           { "name": "latitude", "in": "query", "required": false, "schema": { "type": "number" } },
@@ -92,6 +93,7 @@
     "/restocks/{id}": {
       "get": {
         "summary": "Get a restock",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
         "parameters": [{ "$ref": "#/components/parameters/Id" }],
         "responses": {
           "200": { "description": "Restock detail" },
@@ -128,12 +130,46 @@
     "/stores/nearby": {
       "get": {
         "summary": "List nearby Best Buy stores and their active restocks",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
+        "parameters": [
+          {
+            "name": "zip",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^\\d{5}$" }
+          },
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "number", "minimum": -90, "maximum": 90 }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "number", "minimum": -180, "maximum": 180 }
+          },
+          {
+            "name": "radius",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "number", "minimum": 1, "maximum": 100, "default": 25 }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 25 }
+          }
+        ],
         "responses": { "200": { "description": "Nearby stores" } }
       }
     },
     "/stores/{id}": {
       "get": {
         "summary": "Get a Best Buy store",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
         "parameters": [{ "$ref": "#/components/parameters/Id" }],
         "responses": { "200": { "description": "Store detail" } }
       }
@@ -141,6 +177,7 @@
     "/stores/{id}/restocks": {
       "get": {
         "summary": "List restocks for a store",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
         "parameters": [{ "$ref": "#/components/parameters/Id" }],
         "responses": { "200": { "description": "Store restocks" } }
       }
@@ -148,6 +185,7 @@
     "/stats": {
       "get": {
         "summary": "Get paid-member statistics",
+        "security": [{ "bearerApiKey": [] }, { "cookieSession": [] }],
         "responses": { "200": { "description": "Member statistics" } }
       }
     },
@@ -238,7 +276,13 @@
   },
   "components": {
     "securitySchemes": {
-      "cookieSession": { "type": "apiKey", "in": "cookie", "name": "__Host-restock_session" }
+      "cookieSession": { "type": "apiKey", "in": "cookie", "name": "__Host-restock_session" },
+      "bearerApiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "stk_live_…",
+        "description": "Private server-side API key issued after administrator approval."
+      }
     },
     "parameters": {
       "Id": {
